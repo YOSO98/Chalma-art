@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE.ART — L'art dans le code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050508;
+    --accent1: #00fff0;
+    --accent2: #ff00aa;
+    --accent3: #ffe100;
+    --text: #e8e8f0;
+    --dim: #555570;
+    --code: #3aff9e;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  nav {
+    position: fixed;
+    top: 0; width: 100%;
+    padding: 1.2rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 100;
+    background: linear-gradient(to bottom, rgba(5,5,8,0.9), transparent);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--accent1);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px var(--accent1), 0 0 40px var(--accent1);
+  }
+
+  nav ul { list-style: none; display: flex; gap: 2.5rem; }
+  nav a {
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  nav a:hover { color: var(--text); }
+
+  section { position: relative; z-index: 10; padding: 8rem 3rem; }
+
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .hero-inner { max-width: 860px; }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent2);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,0,170,0.3);
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    background: rgba(255,0,170,0.05);
+  }
+
+  h1 {
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #fff 30%, var(--accent1) 60%, var(--accent2) 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--dim);
+    max-width: 480px;
+    margin: 0 auto 3rem;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  .hero-cta {
+    display: inline-block;
+    padding: 1rem 2.8rem;
+    background: transparent;
+    border: 1px solid var(--accent1);
+    color: var(--accent1);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: color 0.3s;
+  }
+  .hero-cta::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: var(--accent1);
+    transition: left 0.35s cubic-bezier(.4,0,.2,1);
+    z-index: -1;
+  }
+  .hero-cta:hover { color: #050508; }
+  .hero-cta:hover::before { left: 0; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent3);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  h2 {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+  }
+
+  #gallery { max-width: 1200px; margin: 0 auto; }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .art-card {
+    position: relative;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: #0a0a12;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.4s cubic-bezier(.2,0,0,1), border-color 0.3s;
+  }
+  .art-card:hover { transform: translateY(-6px); border-color: rgba(0,255,240,0.3); }
+  .art-card canvas { width: 100%; height: 100%; display: block; }
+
+  .art-card-info {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 1.2rem;
+    background: linear-gradient(to top, rgba(5,5,8,0.95), transparent);
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  .art-card:hover .art-card-info { transform: translateY(0); }
+  .art-card-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .art-card-info p { font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--dim); }
+
+  #code-poetry { max-width: 900px; margin: 0 auto; text-align: center; }
+
+  .poem-canvas-wrapper {
+    position: relative;
+    margin: 4rem 0 2rem;
+    height: 380px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  #poem-canvas { width: 100%; height: 100%; display: block; }
+
+  #editor-section { max-width: 1100px; margin: 0 auto; }
+
+  .editor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .editor-pane {
+    background: #0c0c16;
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 1.5rem;
+  }
+
+  .pane-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .pane-label span { width: 6px; height: 6px; border-radius: 50%; background: var(--code); display: inline-block; }
+
+  #live-code {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--code);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    resize: none;
+    height: 280px;
+    outline: none;
+    caret-color: var(--accent1);
+  }
+
+  #output-canvas { width: 100%; height: 315px; display: block; }
+
+  #manifesto { max-width: 700px; margin: 0 auto; text-align: center; padding: 10rem 3rem; }
+
+  .manifesto-quote {
+    font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+    font-weight: 400;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.85);
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+
+  .manifesto-author {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent2);
+    letter-spacing: 0.25em;
+  }
+
+  footer {
+    text-align: center;
+    padding: 3rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--dim);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    z-index: 10;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    color: var(--dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  .scroll-hint::after {
+    content: '';
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--dim), transparent);
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  @media (max-width: 700px) {
+    .gallery-grid { grid-template-columns: 1fr 1fr; }
+    .editor-grid { grid-template-columns: 1fr; }
+    nav ul { display: none; }
+    nav { padding: 1rem 1.5rem; }
+    section { padding: 5rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<nav>
+  <div class="logo">{ CODE.ART }</div>
+  <ul>
+    <li><a href="#gallery">Galerie</a></li>
+    <li><a href="#editor-section">Éditeur</a></li>
+    <li><a href="#manifesto">Manifeste</a></li>
+  </ul>
+</nav>
+
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">// art génératif · code vivant</div>
+    <h1>Le code<br>comme<br>pinceau</h1>
+    <p class="hero-sub">Quand les algorithmes deviennent œuvres. Explorez l'espace entre la logique et la beauté.</p>
+    <a class="hero-cta" href="#gallery">Explorer la galerie</a>
+  </div>
+  <div class="scroll-hint">SCROLL</div>
+</section>
+
+<section>
+  <div id="gallery">
+    <div class="section-label">// 001 — Galerie</div>
+    <h2>Œuvres générées<br>par algorithmes</h2>
+    <div class="gallery-grid">
+      <div class="art-card"><canvas id="c1"></canvas><div class="art-card-info"><h3>Flux Orbital</h3><p>sin(x) · cos(y) · t</p></div></div>
+      <div class="art-card"><canvas id="c2"></canvas><div class="art-card-info"><h3>Labyrinthe Fractal</h3><p>récursion · chaos · beauté</p></div></div>
+      <div class="art-card"><canvas id="c3"></canvas><div class="art-card-info"><h3>Vague de Lissajous</h3><p>oscillation harmonique</p></div></div>
+      <div class="art-card"><canvas id="c4"></canvas><div class="art-card-info"><h3>Plasma Vivant</h3><p>bruit de Perlin · couleur</p></div></div>
+      <div class="art-card"><canvas id="c5"></canvas><div class="art-card-info"><h3>Constellation</h3><p>graphe aléatoire · lumière</p></div></div>
+      <div class="art-card"><canvas id="c6"></canvas><div class="art-card-info"><h3>Spirale de Fibonacci</h3><p>φ = (1 + √5) / 2</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div id="code-poetry">
+    <div class="section-label">// 002 — Poésie du code</div>
+    <h2>Les mathématiques<br>comme langage poétique</h2>
+    <div class="poem-canvas-wrapper">
+      <canvas id="poem-canvas"></canvas>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div id="editor-section">
+    <div class="section-label">// 003 — Éditeur vivant</div>
+    <h2>Écris, observe,<br>crée en temps réel</h2>
+    <div class="editor-grid">
+      <div class="editor-pane">
+        <div class="pane-label"><span></span>code.js</div>
+        <textarea id="live-code" spellcheck="false">// Modifiez ce code en temps réel
+// Utilisez: t (temps), W (largeur), H (hauteur)
+// ctx: contexte 2D du canvas
+
+ctx.fillStyle = '#050508';
+ctx.fillRect(0, 0, W, H);
+
+for(let i = 0; i < 80; i++) {
+  let angle = (i / 80) * Math.PI * 2;
+  let r = 80 + Math.sin(t * 0.9 + i * 0.4) * 60;
+  let x = W/2 + Math.cos(angle + t*0.3) * r;
+  let y = H/2 + Math.sin(angle * 2 + t*0.5) * r * 0.6;
+
+  let hue = (i * 4.5 + t * 50) % 360;
+  ctx.beginPath();
+  ctx.arc(x, y, 3 + Math.sin(t + i) * 2, 0, Math.PI*2);
+  ctx.fillStyle = `hsla(${hue}, 100%, 65%, 0.9)`;
+  ctx.fill();
+
+  ctx.shadowColor = `hsl(${hue}, 100%, 65%)`;
+  ctx.shadowBlur = 15;
+}
+ctx.shadowBlur = 0;</textarea>
+      </div>
+      <div class="editor-pane">
+        <div class="pane-label"><span></span>rendu.live</div>
+        <canvas id="output-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="manifesto">
+  <div class="section-label">// 004 — Manifeste</div>
+  <p class="manifesto-quote">"Le code n'est pas seulement de la logique — c'est une forme d'expression, un médium aussi riche que la peinture ou la musique."</p>
+  <div class="manifesto-author">— CODE.ART MANIFESTE, 2024</div>
+</section>
+
+<footer>
+  &lt;/ Fait avec du code et de l'amour &gt; — CODE.ART © 2024
+</footer>
+
+<script>
+// ── BACKGROUND PARTICLES ──
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], mouse = { x: -9999, y: -9999 };
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function Particle() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.size = Math.random() * 1.5 + 0.3;
+    this.hue = Math.random() * 60 + 160;
+    this.alpha = Math.random() * 0.5 + 0.1;
+  }
+
+  Particle.prototype.update = function() {
+    let dx = mouse.x - this.x, dy = mouse.y - this.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 120) { this.vx -= dx / dist * 0.3; this.vy -= dy / dist * 0.3; }
+    this.vx *= 0.98; this.vy *= 0.98;
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0) this.x = W;
+    if (this.x > W) this.x = 0;
+    if (this.y < 0) this.y = H;
+    if (this.y > H) this.y = 0;
+  };
+
+  for (let i = 0; i < 120; i++) particles.push(new Particle());
+  resize();
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < particles.length; i++) {
+      particles[i].update();
+      let p = particles[i];
+      for (let j = i + 1; j < particles.length; j++) {
+        let q = particles[j];
+        let dx = p.x - q.x, dy = p.y - q.y;
+        let d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 100) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = `rgba(0,255,240,${(1 - d/100) * 0.08})`;
+          ctx.lineWidth = 0.5; ctx.stroke();
+        }
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 80%, 65%, ${p.alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── GALLERY CARDS ──
+function setupCard(id, drawFn) {
+  const canvas = document.getElementById(id);
+  const parent = canvas.parentElement;
+  let W = parent.offsetWidth, H = parent.offsetHeight;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  let t = 0;
+  function loop() { drawFn(ctx, W, H, t); t += 0.016; requestAnimationFrame(loop); }
+  loop();
+}
+
+setupCard('c1', (ctx, W, H, t) => {
+  ctx.fillStyle = 'rgba(5,5,8,0.15)';
+  ctx.fillRect(0,0,W,H);
+  for (let i = 0; i < 6; i++) {
+    let r = 30 + i * 18, pts = 60 + i * 20;
+    ctx.beginPath();
+    for (let j = 0; j <= pts; j++) {
+      let a = (j / pts) * Math.PI * 2;
+      let wob = r + Math.sin(a * 3 + t + i) * 12;
+      let x = W/2 + Math.cos(a + t * (0.3 - i*0.04)) * wob;
+      let y = H/2 + Math.sin(a + t * (0.3 - i*0.04)) * wob * 0.8;
+      j === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = `hsla(${180 + i*25}, 100%, 65%, 0.7)`;
+    ctx.lineWidth = 1; ctx.stroke();
+  }
+});
+
+setupCard('c2', (ctx, W, H, t) => {
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0,0,W,H);
+  function drawRect(x,y,s,angle,depth) {
+    if (depth === 0 || s < 2) return;
+    ctx.save();
+    ctx.translate(x,y); ctx.rotate(angle);
+    ctx.strokeStyle = `hsla(${280 + depth*20}, 80%, ${50+depth*5}%, 0.9)`;
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(-s/2,-s/2,s,s);
+    drawRect(0,-s/2, s*0.72, angle*0.1+0.05, depth-1);
+    ctx.restore();
+  }
+  drawRect(W/2, H/2, Math.min(W,H)*0.75, t*0.2, 10);
+});
+
+setupCard('c3', (ctx, W, H, t) => {
+  ctx.fillStyle = 'rgba(5,5,8,0.08)';
+  ctx.fillRect(0,0,W,H);
+  let cx = W/2, cy = H/2, rx = W*0.4, ry = H*0.4;
+  ctx.beginPath();
+  for (let i = 0; i <= 800; i++) {
+    let a = (i/800) * Math.PI * 4;
+    let x = cx + Math.sin(3*a + t*0.5) * rx;
+    let y = cy + Math.sin(2*a + t*0.3) * ry;
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = `hsl(${(t*40)%360}, 100%, 65%)`;
+  ctx.lineWidth = 1.2;
+  ctx.shadowColor = `hsl(${(t*40)%360}, 100%, 65%)`;
+  ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
+});
+
+setupCard('c4', (ctx, W, H, t) => {
+  const imgData = ctx.createImageData(W, H);
+  const d = imgData.data;
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < W; x += 2) {
+      let v = Math.sin(x*0.05 + t) + Math.sin(y*0.05 + t*0.7)
+            + Math.sin((x+y)*0.035 + t*1.2)
+            + Math.sin(Math.sqrt(((x-W/2)**2+(y-H/2)**2))*0.07 + t);
+      let hue = (v * 30 + 180) % 360;
+      let r = 128 + 127 * Math.sin(hue * Math.PI/180);
+      let g = 128 + 127 * Math.sin((hue+120) * Math.PI/180);
+      let b = 128 + 127 * Math.sin((hue+240) * Math.PI/180);
+      let i = (y*W+x)*4;
+      d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=220;
+      d[i+4]=r; d[i+5]=g; d[i+6]=b; d[i+7]=220;
+      if (y+1 < H) { d[(y+1)*W*4+x*4]=r; d[(y+1)*W*4+x*4+1]=g; d[(y+1)*W*4+x*4+2]=b; d[(y+1)*W*4+x*4+3]=220; }
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+});
+
+setupCard('c5', (ctx, W, H, t) => {
+  ctx.fillStyle = 'rgba(5,5,8,0.12)'; ctx.fillRect(0,0,W,H);
+  const n = 28;
+  const pts = Array.from({length:n}, (_,i) => ({
+    x: W/2 + Math.cos(i/n*Math.PI*2 + t*0.1*(i%3===0?1:-1)) * (W*0.35 * (0.4+Math.sin(i*1.3)*0.6)),
+    y: H/2 + Math.sin(i/n*Math.PI*2 + t*0.1*(i%3===0?-1:1)) * (H*0.4 * (0.4+Math.cos(i*1.7)*0.6))
+  }));
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      let dx = pts[i].x-pts[j].x, dy = pts[i].y-pts[j].y, d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 80) {
+        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = `rgba(255,225,0,${(1-d/80)*0.6})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+  pts.forEach((p,i) => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = `hsl(${45+i*10},100%,75%)`;
+    ctx.shadowColor = '#ffe100'; ctx.shadowBlur = 10; ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+});
+
+setupCard('c6', (ctx, W, H, t) => {
+  ctx.fillStyle = 'rgba(5,5,8,0.15)'; ctx.fillRect(0,0,W,H);
+  const phi = (1+Math.sqrt(5))/2, cx = W/2, cy = H/2;
+  for (let i = 0; i < 400; i++) {
+    let a = i * phi * Math.PI * 2 + t * 0.2;
+    let r = Math.sqrt(i) * 5.5;
+    let x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    let hue = (i * 0.9 + t * 30) % 360;
+    let sz = Math.max(0.5, 3 - r/Math.min(W,H) * 2);
+    ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI*2);
+    ctx.fillStyle = `hsla(${hue},100%,65%,${0.8 - r/Math.min(W,H)})`;
+    ctx.fill();
+  }
+});
+
+// ── POEM CANVAS ──
+(function() {
+  const canvas = document.getElementById('poem-canvas');
+  const wrapper = canvas.parentElement;
+  const W = canvas.width = wrapper.offsetWidth;
+  const H = canvas.height = wrapper.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const lines = [
+    "for (let t = 0; t < ∞; t++) {",
+    "   beauty = sin(t) * cos(heart);",
+    "   color  = hsl(t * 360, 100%, 65%);",
+    "   draw(wonder, at: [x, y, z]);",
+    "   if (eyes.closed) continue;",
+    "   art++;",
+    "}"
+  ];
+  let phase = 0;
+  function draw() {
+    ctx.fillStyle = 'rgba(5,5,8,0.04)'; ctx.fillRect(0,0,W,H);
+    for (let x = 0; x < W; x += 2) {
+      let y = H/2 + Math.sin(x*0.02 + phase*0.8) * 60 + Math.sin(x*0.05 + phase*1.3)*25;
+      let hue = (x * 0.3 + phase * 40) % 360;
+      ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${hue},100%,65%,0.3)`; ctx.fill();
+    }
+    ctx.font = '14px "Space Mono", monospace';
+    lines.forEach((line, i) => {
+      let y = H/2 - lines.length*16 + i*28 + Math.sin(phase + i*0.5)*5;
+      let alpha = 0.4 + Math.sin(phase*0.7 + i*0.8)*0.3;
+      ctx.fillStyle = `rgba(58,255,158,${alpha})`;
+      ctx.shadowColor = '#3aff9e'; ctx.shadowBlur = 4 + Math.sin(phase + i)*3;
+      ctx.fillText(line, 40, y);
+    });
+    ctx.shadowBlur = 0; phase += 0.018;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── LIVE EDITOR ──
+(function() {
+  const canvas = document.getElementById('output-canvas');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const textarea = document.getElementById('live-code');
+  let t = 0, userFn = null;
+
+  function compile() {
+    try { userFn = new Function('ctx','W','H','t', textarea.value); }
+    catch(e) { userFn = null; }
+  }
+  compile();
+  textarea.addEventListener('input', compile);
+
+  function loop() {
+    try {
+      ctx.save();
+      if (userFn) userFn(ctx, W, H, t);
+      else {
+        ctx.fillStyle = '#050508'; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = 'rgba(255,0,100,0.5)';
+        ctx.font = '14px monospace'; ctx.fillText('// Erreur de syntaxe…', 20, H/2);
+      }
+      ctx.restore();
+    } catch(e) {}
+    t += 0.016;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
