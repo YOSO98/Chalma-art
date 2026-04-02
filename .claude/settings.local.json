@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(git -C D:/chalma-art add index.html)",
+      "Bash(git -C D:/chalma-art commit -m \"feat: replace index.html with CHALMA ART gallery shell\")",
+      "Bash(git -C D:/chalma-art push)"
+    ]
+  }
+}

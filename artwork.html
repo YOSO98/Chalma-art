@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">CHALMA ART — Œuvre</title>
+<meta name="description" id="pageDesc" content="Œuvre d'art génératif CHALMA ART">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/artwork.css">
+</head>
+<body class="artwork-page">
+
+<!-- Custom cursor -->
+<div id="cursor-ring"></div>
+<div id="cursor-dot"></div>
+
+<!-- Background -->
+<div id="bg-noise"></div>
+<div id="bg-vignette"></div>
+<div id="bg-scanlines"></div>
+
+<!-- NAVIGATION -->
+<nav id="main-nav" class="scrolled">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <span class="logo-bracket">[</span>
+      <span class="logo-text">CHALMA</span>
+      <span class="logo-sub">ART</span>
+      <span class="logo-bracket">]</span>
+    </a>
+    <div class="artwork-nav-meta">
+      <span class="artwork-nav-seed" id="navSeed">SEED #—</span>
+      <span class="artwork-nav-family" id="navFamily">—</span>
+    </div>
+    <div class="nav-artwork-actions">
+      <button class="nav-action-btn" id="prevBtn" title="Œuvre précédente">←</button>
+      <button class="nav-action-btn" id="nextBtn" title="Œuvre suivante">→</button>
+      <button class="nav-action-btn" id="randomNavBtn" title="Aléatoire">⟳</button>
+    </div>
+    <a href="index.html" class="btn-secondary btn-sm">← Galerie</a>
+  </div>
+</nav>
+
+<!-- MAIN LAYOUT -->
+<main id="artwork-main">
+
+  <!-- Canvas area -->
+  <div id="canvas-wrap">
+    <canvas id="artwork-canvas"></canvas>
+    <div id="canvas-overlay">
+      <button class="canvas-btn" id="fullscreenBtn" title="Plein écran">⛶</button>
+    </div>
+  </div>
+
+  <!-- Info panel -->
+  <aside id="info-panel">
+    <div id="panel-scroll">
+
+      <!-- Title & meta -->
+      <div class="panel-section panel-header">
+        <div class="panel-seed" id="panelSeed">SEED #—</div>
+        <h1 class="panel-title" id="panelTitle">Chargement…</h1>
+        <div class="panel-family" id="panelFamily">
+          <span class="family-icon" id="panelIcon">—</span>
+          <span class="family-name" id="panelFamilyName">—</span>
+        </div>
+        <div class="panel-tags" id="panelTags"></div>
+      </div>
+
+      <!-- Description -->
+      <div class="panel-section">
+        <div class="panel-label">Description</div>
+        <p class="panel-desc" id="panelDesc">—</p>
+      </div>
+
+      <!-- Equation -->
+      <div class="panel-section">
+        <div class="panel-label">Équation</div>
+        <div class="panel-equation" id="panelEquation">—</div>
+      </div>
+
+      <!-- Audio -->
+      <div class="panel-section panel-audio">
+        <div class="panel-label">Audio</div>
+        <div class="audio-controls">
+          <button class="audio-play-btn" id="audioPlayBtn">
+            <span class="play-icon">▶</span>
+          </button>
+          <div class="audio-visualizer" id="audioViz">
+            <canvas id="vizCanvas" width="180" height="50"></canvas>
+          </div>
+          <div class="volume-wrap">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 5h2l3-3v10L4 9H2V5z" fill="currentColor"/>
+              <path d="M9 5c.8.6 1.3 1.5 1.3 2.5S9.8 9.4 9 10" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none"/>
+            </svg>
+            <input type="range" id="volumeSlider" min="0" max="100" value="60" class="volume-slider">
+          </div>
+        </div>
+      </div>
+
+      <!-- Parameters -->
+      <div class="panel-section">
+        <div class="panel-label">Paramètres</div>
+        <div id="paramSliders" class="param-sliders"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel-section panel-actions">
+        <div class="panel-label">Actions</div>
+        <div class="action-grid">
+          <button class="action-btn" id="downloadBtn">
+            <span>↓</span> Télécharger PNG
+          </button>
+          <button class="action-btn" id="copyLinkBtn">
+            <span>⎘</span> Copier lien
+          </button>
+          <button class="action-btn" id="fullscreenBtn2">
+            <span>⛶</span> Plein écran
+          </button>
+          <button class="action-btn" id="randomBtn">
+            <span>⟳</span> Aléatoire
+          </button>
+        </div>
+      </div>
+
+      <!-- Neighbors -->
+      <div class="panel-section">
+        <div class="panel-label">Œuvres proches</div>
+        <div class="neighbors-grid" id="neighborsGrid"></div>
+      </div>
+
+    </div>
+  </aside>
+</main>
+
+<!-- Scripts -->
+<script src="js/prng.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/algorithms/fractals.js"></script>
+<script src="js/algorithms/attractors.js"></script>
+<script src="js/algorithms/particles.js"></script>
+<script src="js/algorithms/cellular.js"></script>
+<script src="js/algorithms/waves.js"></script>
+<script src="js/algorithms/geometry.js"></script>
+<script src="js/algorithms/fluid.js"></script>
+<script src="js/algorithms/organic.js"></script>
+<script src="js/algorithms/cosmic.js"></script>
+<script src="js/algorithms/neural.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/artwork-page.js"></script>
+</body>
+</html>
