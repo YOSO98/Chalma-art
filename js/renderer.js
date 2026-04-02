@@ -1,13 +1,15 @@
 /* ══════════════════════════════════════════════════════════════
-   CHALMA ART — Universal Renderer
-   Routes artwork to the correct algorithm family renderer
+   CHALMA ART — Universal Renderer (optimisé performance)
+   - Cards : frame statique unique + animation au hover uniquement
+   - Max 3 animations simultanées dans la galerie
    ══════════════════════════════════════════════════════════════ */
 'use strict';
 
 const Renderer = {
 
-  /* Algorithm family map */
   _algos: null,
+  _activeAnimations: 0,
+  _MAX_ANIMATIONS: 3,
 
   _getAlgos() {
     if (!this._algos) {
@@ -27,107 +29,83 @@ const Renderer = {
     return this._algos;
   },
 
-  /**
-   * Render an artwork onto a canvas context.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} W - canvas width
-   * @param {number} H - canvas height
-   * @param {object} artwork - from generateArtwork(seed)
-   * @param {number} t - time in seconds
-   */
   render(ctx, W, H, artwork, t) {
-    const algos = this._getAlgos();
-    const algo = algos[artwork.familyId];
+    const algo = this._getAlgos()[artwork.familyId];
     if (!algo) {
-      // Fallback
       ctx.fillStyle = artwork.palette.bg || '#03030a';
       ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = artwork.palette.primary || '#c9a84c';
-      ctx.font = `${Math.min(W, H) * 0.05}px "Space Mono", monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`Seed #${artwork.seed}`, W / 2, H / 2);
       return;
     }
     try {
       algo.render(ctx, W, H, artwork, t);
     } catch (e) {
-      // On render error, show graceful fallback
       ctx.fillStyle = '#03030a';
       ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(201,168,76,0.3)';
-      ctx.fillRect(W*0.1, H*0.1, W*0.8, H*0.8);
     }
   },
 
   /**
-   * Create a managed canvas animation for a card (thumbnail).
-   * Returns a { canvas, start, stop } object.
+   * Crée un renderer de card :
+   * - Rendu statique immédiat (t=0 ou t aléatoire)
+   * - Animation uniquement au hover, stoppée au mouse-leave
    */
   createCardRenderer(artwork, size = 300) {
     const canvas = document.createElement('canvas');
-    canvas.width = size;
+    canvas.width  = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    let raf = null;
-    let t = 0;
-    let running = false;
-    let lastFrame = 0;
-    const targetFPS = 30;
-    const frameInterval = 1000 / targetFPS;
-
-    // Clear algo-specific state so each card is independent
+    // Isolated algo instance (pas de state partagé)
     const algoObj = this._getAlgos()[artwork.familyId];
-    const stateKeys = Object.keys(algoObj || {}).filter(k => k.startsWith('_'));
-    const savedState = {};
-    for (const k of stateKeys) savedState[k] = algoObj[k];
-
-    // Each card gets its own isolated algo instance
-    const isolatedAlgo = algoObj ? Object.create(algoObj) : null;
-    if (isolatedAlgo) {
-      for (const k of stateKeys) delete isolatedAlgo[k];
+    const isolated = algoObj ? Object.create(algoObj) : null;
+    if (isolated) {
+      Object.keys(algoObj).filter(k => k.startsWith('_')).forEach(k => delete isolated[k]);
     }
 
-    const loop = (timestamp) => {
-      if (!running) return;
-      const elapsed = timestamp - lastFrame;
-      if (elapsed >= frameInterval) {
-        lastFrame = timestamp;
-        if (isolatedAlgo) {
-          try { isolatedAlgo.render(ctx, size, size, artwork, t); }
-          catch (e) {
-            ctx.fillStyle = '#03030a';
-            ctx.fillRect(0, 0, size, size);
-          }
-        }
-        t += frameInterval / 1000;
+    let raf = null;
+    let running = false;
+    let t = Math.random() * 60; // offset aléatoire pour diversifier les frames statiques
+    const self = this;
+
+    const renderFrame = () => {
+      if (isolated) {
+        try { isolated.render(ctx, size, size, artwork, t); }
+        catch (e) { ctx.fillStyle = '#03030a'; ctx.fillRect(0, 0, size, size); }
       }
+    };
+
+    // Rendu statique initial
+    renderFrame();
+
+    const start = () => {
+      if (running || self._activeAnimations >= self._MAX_ANIMATIONS) return;
+      running = true;
+      self._activeAnimations++;
+      let last = 0;
+      const loop = (ts) => {
+        if (!running) return;
+        if (ts - last >= 33) { // ~30fps
+          renderFrame();
+          t += 0.033;
+          last = ts;
+        }
+        raf = requestAnimationFrame(loop);
+      };
       raf = requestAnimationFrame(loop);
     };
 
-    return {
-      canvas,
-      start() {
-        if (running) return;
-        running = true;
-        lastFrame = 0;
-        raf = requestAnimationFrame(loop);
-      },
-      stop() {
-        running = false;
-        if (raf) { cancelAnimationFrame(raf); raf = null; }
-      },
-      setT(time) { t = time; },
-      getT() { return t; }
+    const stop = () => {
+      if (!running) return;
+      running = false;
+      self._activeAnimations = Math.max(0, self._activeAnimations - 1);
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
     };
+
+    return { canvas, start, stop };
   },
 
   /**
-   * Create a full-quality renderer for artwork.html detail page.
-   * @param {HTMLCanvasElement} canvas
-   * @param {object} artwork
-   * @returns {{ start, stop, setT }}
+   * Renderer plein qualité pour la page détail (artwork.html).
    */
   createDetailRenderer(canvas, artwork) {
     const ctx = canvas.getContext('2d');
@@ -137,24 +115,19 @@ const Renderer = {
     let pausedAt = 0;
 
     const algoObj = this._getAlgos()[artwork.familyId];
-    const isolatedAlgo = algoObj ? Object.create(algoObj) : null;
-    if (isolatedAlgo) {
-      const keys = Object.keys(algoObj).filter(k => k.startsWith('_'));
-      for (const k of keys) delete isolatedAlgo[k];
+    const isolated = algoObj ? Object.create(algoObj) : null;
+    if (isolated) {
+      Object.keys(algoObj).filter(k => k.startsWith('_')).forEach(k => delete isolated[k]);
     }
 
-    const loop = (timestamp) => {
+    const loop = (ts) => {
       if (!running) return;
-      if (!startTime) startTime = timestamp;
-      const t = pausedAt + (timestamp - startTime) / 1000;
+      if (!startTime) startTime = ts;
+      const t = pausedAt + (ts - startTime) / 1000;
       const W = canvas.width, H = canvas.height;
-
-      if (isolatedAlgo) {
-        try { isolatedAlgo.render(ctx, W, H, artwork, t); }
-        catch (e) {
-          ctx.fillStyle = '#03030a';
-          ctx.fillRect(0, 0, W, H);
-        }
+      if (isolated) {
+        try { isolated.render(ctx, W, H, artwork, t); }
+        catch (e) { ctx.fillStyle = '#03030a'; ctx.fillRect(0, 0, W, H); }
       }
       raf = requestAnimationFrame(loop);
     };
@@ -167,50 +140,21 @@ const Renderer = {
         raf = requestAnimationFrame(loop);
       },
       stop() {
+        if (!running) return;
         running = false;
-        if (startTime && raf) pausedAt += (performance.now() - startTime) / 1000;
+        if (startTime) pausedAt += (performance.now() - startTime) / 1000;
         if (raf) { cancelAnimationFrame(raf); raf = null; }
         startTime = null;
       },
-      get t() {
-        return pausedAt + (startTime ? (performance.now() - startTime) / 1000 : 0);
-      },
       downloadPNG(filename) {
-        const link = document.createElement('a');
-        link.download = filename || `chalma-${artwork.seed}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const a = document.createElement('a');
+        a.download = filename || `chalma-${artwork.seed}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
       }
     };
-  },
-
-  /**
-   * Render a single static frame to a canvas (no animation).
-   * Used for thumbnail preview generation.
-   */
-  renderStatic(artwork, size = 150) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-
-    const algoObj = this._getAlgos()[artwork.familyId];
-    if (algoObj) {
-      const isolated = Object.create(algoObj);
-      const keys = Object.keys(algoObj).filter(k => k.startsWith('_'));
-      for (const k of keys) delete isolated[k];
-      try { isolated.render(ctx, size, size, artwork, 0); }
-      catch (e) {
-        ctx.fillStyle = artwork.palette.bg || '#03030a';
-        ctx.fillRect(0, 0, size, size);
-      }
-    }
-    return canvas;
   }
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Renderer;
-} else {
-  window.Renderer = Renderer;
-}
+if (typeof module !== 'undefined' && module.exports) module.exports = Renderer;
+else window.Renderer = Renderer;
