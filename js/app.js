@@ -60,7 +60,10 @@
     ctx.clearRect(0,0,W,H);
     for (const p of pts){
       const dx=p.x-mx, dy=p.y-my, d=dx*dx+dy*dy;
-      if (d<8100){ p.vx+=(dx/Math.sqrt(d))*.25; p.vy+=(dy/Math.sqrt(d))*.25; }
+      if (d<8100 && d>1){
+        p.vx+=(dx/Math.sqrt(d))*.25;
+        p.vy+=(dy/Math.sqrt(d))*.25;
+      }
       p.vx*=.97; p.vy*=.97;
       p.x+=p.vx; p.y+=p.vy;
       if(p.x<0)p.x=W; if(p.x>W)p.x=0;
@@ -195,9 +198,18 @@
     </div>
   `).join('');
   grid.querySelectorAll('.algo-card').forEach(card => {
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Filtrer la galerie par ${card.querySelector('.algo-name')?.textContent || 'famille'}`);
     card.addEventListener('click', () => {
       document.getElementById('gallery')?.scrollIntoView({behavior:'smooth'});
       setTimeout(() => Gallery.setFilter(parseInt(card.dataset.cat)), 600);
+    });
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
     });
   });
 })();
@@ -234,6 +246,8 @@ const Gallery = (function() {
     const el   = document.createElement('div');
     el.className  = 'art-card';
     el.dataset.seed = seed;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'link');
 
     const rendererObj = Renderer.createCardRenderer(aw, 300);
     el.appendChild(rendererObj.canvas);
@@ -258,6 +272,12 @@ const Gallery = (function() {
     obs.observe(el);
 
     el.addEventListener('click', () => { window.location.href = `artwork.html?seed=${seed}`; });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
+    });
 
     pool.set(seed, { el, rendererObj, obs });
     return el;
@@ -328,7 +348,13 @@ const Gallery = (function() {
   function search(q) {
     q = q.toLowerCase().trim();
     const n = parseInt(q);
+    const rangeMatch = q.match(/^(\d{1,5})\s*-\s*(\d{1,5})$/);
     if (!q) { filteredSeeds = [...allSeeds]; }
+    else if (rangeMatch) {
+      const min = Math.max(1, Math.min(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)));
+      const max = Math.min(50000, Math.max(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10)));
+      filteredSeeds = allSeeds.filter(s => s >= min && s <= max);
+    }
     else if (!isNaN(n) && n>=1 && n<=50000) { filteredSeeds = [n]; }
     else {
       filteredSeeds = allSeeds.filter(s => {
@@ -361,6 +387,23 @@ if (searchInput) {
 
 document.getElementById('randomBtn')?.addEventListener('click', () => {
   window.location.href = `artwork.html?seed=${Math.floor(Math.random()*50000)+1}`;
+});
+
+addEventListener('keydown', e => {
+  const activeTag = document.activeElement?.tagName;
+  const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+  if (isTyping) return;
+
+  if (e.key === '/') {
+    e.preventDefault();
+    searchInput?.focus();
+  } else if (e.key.toLowerCase() === 'r') {
+    window.location.href = `artwork.html?seed=${Math.floor(Math.random()*50000)+1}`;
+  } else if (e.key === 'Escape' && searchInput) {
+    searchInput.value = '';
+    Gallery.search('');
+    searchInput.blur();
+  }
 });
 
 /* ══════════════════════════════════════════════════════════════
